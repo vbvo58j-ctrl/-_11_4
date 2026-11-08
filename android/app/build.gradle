@@ -1,0 +1,91 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader("UTF-8") { reader ->
+        localProperties.load(reader)
+    }
+}
+
+def flutterVersionCode = localProperties.getProperty("flutter.versionCode")
+if (flutterVersionCode == null) {
+    flutterVersionCode = "1"
+}
+
+def flutterVersionName = localProperties.getProperty("flutter.versionName")
+if (flutterVersionName == null) {
+    flutterVersionName = "1.0"
+}
+
+android {
+    namespace = "com.plosap.myapp"
+    compileSdk = 36
+    // Use a stable NDK version instead of Flutter auto-selecting NDK 28.2.13676358.
+    ndkVersion = "28.2.13676358"
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+        coreLibraryDesugaringEnabled true
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    defaultConfig {
+        applicationId = "com.plosap.myapp"
+        minSdk = 24
+        targetSdk = 35
+        versionCode = flutterVersionCode.toInteger()
+        versionName = flutterVersionName
+    }
+
+    // توقيع ثابت: كل بناء (على أي جهاز أو على GitHub) يُوقَّع بالمفتاح نفسه،
+    // فيُثبَّت على أي هاتف ويتحدّث فوق النسخة السابقة بلا تعارض توقيع.
+    // ملف المفتاح مخزَّن كنص Base64 (blousab-release.jks.b64) كي لا يتلف عند الاستيراد/الرفع،
+    // ويُفكّ إلى blousab-release.jks تلقائياً قبل التوقيع في كل بناء.
+    def ksB64File = file("blousab-release.jks.b64")
+    if (ksB64File.exists()) {
+        def ksBytes = java.util.Base64.getDecoder().decode(ksB64File.text.replaceAll("\\s", ""))
+        file("blousab-release.jks").bytes = ksBytes
+    }
+
+    signingConfigs {
+        release {
+            def keyProps = new Properties()
+            def keyPropsFile = rootProject.file("key.properties")
+            if (keyPropsFile.exists()) {
+                keyPropsFile.withReader("UTF-8") { keyProps.load(it) }
+            }
+            storeFile = file(keyProps.getProperty("storeFile", "blousab-release.jks"))
+            storePassword = keyProps.getProperty("storePassword", "blousab2026")
+            keyAlias = keyProps.getProperty("keyAlias", "blousab")
+            keyPassword = keyProps.getProperty("keyPassword", "blousab2026")
+            enableV1Signing = true
+            enableV2Signing = true
+            enableV3Signing = true
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.release
+            minifyEnabled false
+            shrinkResources false
+        }
+    }
+}
+
+flutter {
+    source = "../.."
+}
+
+dependencies {
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
+}
